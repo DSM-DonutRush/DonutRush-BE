@@ -1,0 +1,24 @@
+{
+  "POST /auth/google": {
+    "code": "google-oauth-authorization-code"
+  },
+  "POST /auth/refresh": {
+    "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh"
+  },
+  "PUT /user": {
+    "nickname": "도넛러너"
+  },
+  "POST /game/result": {
+    "character": "BRUMP",
+    "clearTime": 8231,
+    "success": true,
+    "penaltyCount": 0,
+    "difficulty": "EASY"
+  },
+  "STOMP /app/match/join": {
+    "difficulty": "EASY"
+  },
+  "STOMP /app/game/{roomId}/gauge": {
+    "score": 42
+  }
+}

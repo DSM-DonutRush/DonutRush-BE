@@ -1,0 +1,705 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Donut Rush API",
+    "description": "Donut Rush 백엔드 REST API 문서입니다. 인증이 필요한 API는 Bearer JWT access token을 Authorization 헤더에 넣어 호출합니다.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local Docker Compose server"
+    },
+    {
+      "url": "http://{host}:8080",
+      "description": "Custom server (IP or hostname)",
+      "variables": {
+        "host": {
+          "default": "localhost",
+          "description": "Server host (e.g. 192.168.0.x)"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "인증 API"
+    },
+    {
+      "name": "User",
+      "description": "유저 API"
+    },
+    {
+      "name": "Game",
+      "description": "게임 결과 API"
+    },
+    {
+      "name": "Ranking",
+      "description": "랭킹 API"
+    },
+    {
+      "name": "WebSocket",
+      "description": "STOMP endpoint는 /ws, publish destination은 /app/match/join, /app/match/leave, /app/game/{roomId}/gauge 입니다."
+    }
+  ],
+  "paths": {
+    "/auth/google": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Google OAuth 로그인",
+        "description": "Google OAuth authorization code로 JWT access token과 refresh token을 발급합니다.",
+        "operationId": "loginWithGoogle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "code": "google-oauth-authorization-code"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "",
+                  "data": {
+                    "accessToken": "eyJhbGciOiJIUzI1NiJ9.access",
+                    "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "토큰 재발급",
+        "description": "Refresh token으로 access token과 refresh token을 재발급합니다.",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              },
+              "example": {
+                "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "토큰 재발급 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "",
+                  "data": {
+                    "accessToken": "eyJhbGciOiJIUzI1NiJ9.new-access",
+                    "refreshToken": "eyJhbGciOiJIUzI1NiJ9.new-refresh"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/user": {
+      "get": {
+        "tags": [
+          "User"
+        ],
+        "summary": "내 정보 조회",
+        "description": "현재 로그인한 유저의 프로필 정보를 조회합니다.",
+        "operationId": "getUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "",
+                  "data": {
+                    "id": "2f5dc8e9-1b15-4b65-80ff-49b6546ec3a1",
+                    "nickname": "도휘",
+                    "profileImage": "https://lh3.googleusercontent.com/a/example"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "User"
+        ],
+        "summary": "닉네임 변경",
+        "description": "현재 로그인한 유저의 닉네임을 변경합니다.",
+        "operationId": "updateUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              },
+              "example": {
+                "nickname": "도넛러너"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "닉네임 변경 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptyResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "닉네임이 변경되었습니다.",
+                  "data": null
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateNickname"
+          }
+        }
+      }
+    },
+    "/game/result": {
+      "post": {
+        "tags": [
+          "Game"
+        ],
+        "summary": "게임 결과 저장",
+        "description": "게임 종료 후 결과를 저장하고 새로 획득한 뱃지를 반환합니다.",
+        "operationId": "saveGameResult",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGameResultRequest"
+              },
+              "example": {
+                "character": "BRUMP",
+                "clearTime": 8231,
+                "success": true,
+                "penaltyCount": 0,
+                "difficulty": "EASY"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "결과 저장 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveGameResultResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "결과 저장 완료",
+                  "data": {
+                    "badgesEarned": [
+                      "기본 클리어",
+                      "무실수",
+                      "스피드"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/ranking": {
+      "get": {
+        "tags": [
+          "Ranking"
+        ],
+        "summary": "랭킹 조회",
+        "description": "전체 또는 주간 랭킹을 조회합니다. type은 overall 또는 weekly를 사용합니다.",
+        "operationId": "getRanking",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "랭킹 타입입니다. 생략 시 overall입니다.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "overall",
+                "weekly"
+              ],
+              "default": "overall"
+            },
+            "example": "overall"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "랭킹 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingListResponseEnvelope"
+                },
+                "example": {
+                  "success": true,
+                  "message": "",
+                  "data": [
+                    {
+                      "rank": 1,
+                      "nickname": "도휘",
+                      "clearTime": 8231,
+                      "character": "BRUMP",
+                      "badges": [
+                        "무실수",
+                        "스피드"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "잘못된 입력값",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "잘못된 입력값입니다.",
+              "data": null
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "인증 실패",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "유효하지 않은 토큰입니다.",
+              "data": null
+            }
+          }
+        }
+      },
+      "DuplicateNickname": {
+        "description": "닉네임 중복",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "message": "이미 사용 중인 닉네임입니다.",
+              "data": null
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Google OAuth authorization code",
+            "example": "google-oauth-authorization-code"
+          }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "JWT refresh token",
+            "example": "eyJhbGciOiJIUzI1NiJ9.refresh"
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "required": [
+          "nickname"
+        ],
+        "properties": {
+          "nickname": {
+            "type": "string",
+            "example": "도넛러너"
+          }
+        }
+      },
+      "SaveGameResultRequest": {
+        "type": "object",
+        "required": [
+          "character",
+          "clearTime",
+          "success",
+          "penaltyCount",
+          "difficulty"
+        ],
+        "properties": {
+          "character": {
+            "$ref": "#/components/schemas/Character"
+          },
+          "clearTime": {
+            "type": "integer",
+            "format": "int64",
+            "description": "클리어 소요 시간입니다. 단위는 밀리초입니다.",
+            "example": 8231
+          },
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "penaltyCount": {
+            "type": "integer",
+            "format": "int32",
+            "example": 0
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/Difficulty"
+          }
+        }
+      },
+      "TokenResponse": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiJ9.access"
+          },
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiJ9.refresh"
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "nickname"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "2f5dc8e9-1b15-4b65-80ff-49b6546ec3a1"
+          },
+          "nickname": {
+            "type": "string",
+            "example": "도휘"
+          },
+          "profileImage": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://lh3.googleusercontent.com/a/example"
+          }
+        }
+      },
+      "SaveGameResultResponse": {
+        "type": "object",
+        "required": [
+          "badgesEarned"
+        ],
+        "properties": {
+          "badgesEarned": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "기본 클리어",
+              "무실수",
+              "스피드"
+            ]
+          }
+        }
+      },
+      "RankingResponse": {
+        "type": "object",
+        "required": [
+          "rank",
+          "nickname",
+          "clearTime",
+          "character",
+          "badges"
+        ],
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "format": "int32",
+            "example": 1
+          },
+          "nickname": {
+            "type": "string",
+            "example": "도휘"
+          },
+          "clearTime": {
+            "type": "integer",
+            "format": "int64",
+            "example": 8231
+          },
+          "character": {
+            "$ref": "#/components/schemas/Character"
+          },
+          "badges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "무실수",
+              "스피드"
+            ]
+          }
+        }
+      },
+      "Character": {
+        "type": "string",
+        "enum": [
+          "BRUMP",
+          "JEONGEUN",
+          "BUDIN"
+        ],
+        "description": "BRUMP=브럼프, JEONGEUN=이정은, BUDIN=부딘",
+        "example": "BRUMP"
+      },
+      "Difficulty": {
+        "type": "string",
+        "enum": [
+          "EASY",
+          "NORMAL",
+          "HARD"
+        ],
+        "example": "EASY"
+      },
+      "CommonResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "nullable": true
+          }
+        }
+      },
+      "TokenResponseEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/TokenResponse"
+              }
+            }
+          }
+        ]
+      },
+      "UserResponseEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/UserResponse"
+              }
+            }
+          }
+        ]
+      },
+      "SaveGameResultResponseEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SaveGameResultResponse"
+              }
+            }
+          }
+        ]
+      },
+      "RankingListResponseEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RankingResponse"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "EmptyResponseEnvelope": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CommonResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "nullable": true,
+                "example": null
+              }
+            }
+          }
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "잘못된 입력값입니다."
+          },
+          "data": {
+            "nullable": true,
+            "example": null
+          }
+        }
+      }
+    }
+  }
+}

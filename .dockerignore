@@ -1,0 +1,9 @@
+.git
+.gradle
+build
+.idea
+.omc
+.DS_Store
+*.log
+.env
+HELP.md

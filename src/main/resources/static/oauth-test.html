@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>OAuth Test</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #4285f4; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #3367d6; }
+    pre { background: #f4f4f4; padding: 16px; border-radius: 4px; word-break: break-all; white-space: pre-wrap; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <h2>Google OAuth 테스트</h2>
+  <div id="app"></div>
+
+  <script>
+    const CLIENT_ID = '396559241682-h0o7mk1vdj2f5sc3k7qjletetvak9fnc.apps.googleusercontent.com';
+    const REDIRECT_URI = 'http://localhost:8080/oauth-test.html';
+    const BACKEND_URL = 'http://localhost:8080';
+
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    async function handleCallback(code) {
+      const app = document.getElementById('app');
+      app.innerHTML = '<p>토큰 교환 중...</p>';
+      try {
+        const res = await fetch(`${BACKEND_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          app.innerHTML = `
+            <p class="success">로그인 성공!</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+            <button onclick="location.href='/'">다시 테스트</button>
+          `;
+        } else {
+          app.innerHTML = `<p class="error">실패: ${JSON.stringify(data)}</p><button onclick="location.href='/'">다시 시도</button>`;
+        }
+      } catch (e) {
+        document.getElementById('app').innerHTML = `<p class="error">에러: ${e.message}</p>`;
+      }
+    }
+
+    function startLogin() {
+      const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      url.searchParams.set('client_id', CLIENT_ID);
+      url.searchParams.set('redirect_uri', REDIRECT_URI);
+      url.searchParams.set('response_type', 'code');
+      url.searchParams.set('scope', 'openid email profile');
+      url.searchParams.set('access_type', 'offline');
+      window.location.href = url.toString();
+    }
+
+    if (code) {
+      handleCallback(code);
+    } else {
+      document.getElementById('app').innerHTML = '<button onclick="startLogin()">Google 로그인</button>';
+    }
+  </script>
+</body>
+</html>
